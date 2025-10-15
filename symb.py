@@ -1,24 +1,26 @@
 from smb.SMBConnection import SMBConnection
 
-# Dane logowania
+
 username = ''  
-password = ''     '
+password = ''     
+
 client_machine_name = 'client' 
-server_name = '192.168.68.105'          
+server_name = 'server'         
 server_ip = '192.168.68.105'
+local_ip = '192.168.68.106'    
 share_name = 'share'
 
-# Tworzenie połączenia SMB
-conn = SMBConnection(username, password, client_machine_name, server_name, use_ntlm_v2=True)
-assert conn.connect(server_ip, 445)  # port SMB może być 139 lub 445
 
-# Pobranie listy plików w udziale
+conn = SMBConnection(username, password, client_machine_name, server_name, use_ntlm_v2=True, my_name=client_machine_name)
+assert conn.connect(server_ip, 445, timeout=10, srcaddr=local_ip)  # port SMB 445 lub 139
+
+
 files = conn.listPath(share_name, '/')
 print("Pliki w udziale:")
 for f in files:
     print(f.filename)
 
-# Pobranie pliku z udziału
+
 remote_file_path = '/asdf.txt'
 local_file_path = 'plik_z_udzialu.txt'
 with open(local_file_path, 'wb') as file_obj:

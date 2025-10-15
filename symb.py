@@ -1,31 +1,30 @@
+import socket
 from smb.SMBConnection import SMBConnection
 
-
-username = ''  
-password = ''     
-
-client_machine_name = 'client' 
-server_name = 'server'         
+# Dane logowania
+username = 'twoj_uzytkownik'  # lub ''
+password = 'twoje_haslo'      # lub ''
+client_machine_name = 'client'
+server_name = 'server'
 server_ip = '192.168.68.105'
-local_ip = '192.168.68.106'    
 share_name = 'share'
+local_ip = '192.168.68.106'  # lokalny adres, z którego chcemy wyjść
 
+# Tworzymy połączenie SMB
+conn = SMBConnection(username, password, client_machine_name, server_name, use_ntlm_v2=True)
 
-conn = SMBConnection(username, password, client_machine_name, server_name, use_ntlm_v2=True, my_name=client_machine_name)
-assert conn.connect(server_ip, 445, timeout=10, srcaddr=local_ip)  # port SMB 445 lub 139
+# Tworzymy socket i wiążemy go do lokalnego IP
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((local_ip, 0))  # 0 = dowolny wolny port lokalny
+s.connect((server_ip, 445))  # połączenie do serwera SMB
 
+# Przekazujemy socket do SMBConnection
+conn.sock = s
 
+# Teraz można listować pliki
 files = conn.listPath(share_name, '/')
 print("Pliki w udziale:")
 for f in files:
     print(f.filename)
-
-
-remote_file_path = '/asdf.txt'
-local_file_path = 'plik_z_udzialu.txt'
-with open(local_file_path, 'wb') as file_obj:
-    conn.retrieveFile(share_name, remote_file_path, file_obj)
-
-print(f"Pobrano {remote_file_path} jako {local_file_path}")
 
 conn.close()

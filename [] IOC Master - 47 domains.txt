@@ -1,0 +1,54 @@
+[*] IOC Master - 47 domains
+
+DOMAIN                                                            GROUP          FAMILY         YEAR   RESULT
+============================================================================================================================================
+avsvmcloud.com                                                    APT29          SUNBURST       2020   95.211.179.37, 178.162.203.225, 178.162.217.109
+008bqp230gps9dde71l4qld.appsync-api.us-east-1.avsvmcloud.com      APT29          SUNBURST       2020   20.140.0.1
+02m6hcopd17p6h450gt3.appsync-api.us-west-2.avsvmcloud.com         APT29          SUNBURST       2020   178.162.203.225, 178.162.217.109, 95.211.179.37
+039n5tnndkhrfn5cun0y0sz02hij0b12.appsync-api.us-west-2.avsvmcloud.com APT29          SUNBURST       2020   95.211.179.37, 178.162.203.225, 178.162.217.109
+043o9vacvthf0v95t81l.appsync-api.us-east-2.avsvmcloud.com         APT29          SUNBURST       2020   178.162.203.225, 178.162.217.109, 95.211.179.37
+030cudhvc4crsl5cn660en66hoi3ts2f.appsync-api.us-west-2.avsvmcloud.com APT29          SUNBURST       2020   95.211.179.37, 178.162.217.109, 178.162.203.225
+dataplane.theyardservice.com                                      APT29          Cobalt Strike  2021   64.62.203.97, 64.62.203.98, 85.17.155.52, 85.17.70.38, 178.162.202.97, 46.165.199.7, 85.17.70.16, 85.17.155.53, 46.165.199.9, 178.162.202.96
+cdn.theyardservice.com                                            APT29          Cobalt Strike  2021   85.17.70.38, 46.165.199.9, 178.162.202.96, 85.17.155.53, 178.162.202.97, 64.62.203.98, 85.17.155.52, 46.165.199.7, 85.17.70.16, 64.62.203.97
+static.theyardservice.com                                         APT29          Cobalt Strike  2021   178.162.202.96, 85.17.70.38, 85.17.155.52, 46.165.199.7, 178.162.202.97, 85.17.155.53, 46.165.199.9, 64.62.203.97, 85.17.70.16, 64.62.203.98
+theyardservice.com                                                APT29          Cobalt Strike  2021   64.62.203.98, 85.17.155.53, 64.62.203.97, 46.165.199.7, 178.162.202.97, 85.17.70.16, 85.17.70.38, 46.165.199.9, 178.162.202.96, 85.17.155.52
+worldhomeoutlet.com                                               APT29          Cobalt Strike  2021   85.17.70.16, 64.62.203.97, 85.17.70.38, 85.17.155.53, 178.162.202.97, 178.162.202.96, 46.165.199.9, 46.165.199.7, 64.62.203.98, 85.17.155.52
+malaytravelgroup.com                                              APT28          X-AGENT        2018   CNAME/NO-A
+rapidcomments.com                                                 ProjectSauron  Remsec         2016   104.21.43.154, 172.67.180.168
+suroot.com                                                        Snowman        ZxShell        2014   54.84.240.235, 44.208.83.180
+effers.com                                                        Snowman        ZxShell        2014   192.64.151.235
+iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com                     Lazarus        WannaCry       2017   104.16.167.228, 104.16.166.228
+westurn.in                                                        TrickBot       TrickBot       2026   34.41.139.193
+a1b2c3d4e5f6.westurn.in                                           TrickBot       TrickBot       2026   34.41.139.193
+data.westurn.in                                                   TrickBot       TrickBot       2026   34.41.139.193
+aytobusesre.com                                                   LummaC2        LummaC2        2024   52.16.171.153
+popfealt.one                                                      LummaC2        LummaC2        2024   34.41.139.193
+api.cloudtrafficservice.com                                       CobaltStrike   Cobalt Strike  2026   160.250.93.48
+securityhealthservice.ydns.eu                                     AsyncRAT       AsyncRAT       2024   181.206.158.190
+systemcopilotdrivers.ydns.eu                                      AsyncRAT       AsyncRAT       2024   181.206.158.190
+69cnc.duckdns.org                                                 RAT            RAT            2026   64.89.163.215
+lifeisabouthavingfun448.duckdns.org                               RAT            RAT            2026   45.90.163.37
+tamajailroster.org                                                ClearFake      ClearFake      2026   172.67.220.191, 104.21.43.53
+switchspineprint.com                                              ClearFake      ClearFake      2026   172.67.160.170, 104.21.49.77
+prairiefurnitureshop.com                                          ClearFake      ClearFake      2026   104.21.60.116, 172.67.196.34
+swirlscinnamonrolls.com                                           ClearFake      ClearFake      2026   188.114.96.3, 188.114.97.3
+stephanie-bates.com                                               ClearFake      ClearFake      2026   188.114.96.3, 188.114.97.3
+mulberrylodestar.top                                              SmartApeSG     SmartApeSG     2026   5.161.248.121
+brewtrail.click                                                   RevStealer     RevStealer     2026   188.114.97.0, 188.114.96.0
+push.brewtrail.click                                              RevStealer     RevStealer     2026   188.114.96.0, 188.114.97.0
+da.dojiner.at                                                     Stealer        ArcaneStealer  2026   64.89.160.67
+ph.dojiner.at                                                     Stealer        ArcaneStealer  2026   196.251.121.186
+smarwth.biz                                                       Remus          RemusStealer   2026   217.76.50.71
+chrome-windows.ru                                                 FakeUpdate     ValleyRAT      2026   155.212.243.49
+tashirpizza.su                                                    Malware        Malware        2026   188.114.96.3, 188.114.97.3
+livepilates.com.sg                                                IClickFix      IClickFix      2026   135.181.215.232
+liveproject.fr                                                    IClickFix      IClickFix      2026   217.160.255.139
+lifeisavicnic.com                                                 IClickFix      IClickFix      2026   85.187.142.69
+malware.testcategory.com                                          TEST           Test           2024   104.18.5.35, 104.18.4.35
+phishing.testcategory.com                                         TEST           Test           2024   104.18.5.35, 104.18.4.35
+command-and-control.testcategory.com                              TEST           Test           2024   104.18.4.35, 104.18.5.35
+testmyids.com                                                     TEST           Test           2024   217.160.0.187
+wicar.org                                                         TEST           Test           2024   199.34.228.69
+
+============================================================================================================================================
+[*] RESOLVED=47 | NXDOMAIN=0 | BLOCKED=0 | TOTAL=47

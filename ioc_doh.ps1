@@ -1,7 +1,24 @@
 param(
     [string]$DoHServer = "https://cloudflare-dns.com/dns-query",
-    [int]$DelayMs = 200
+    [int]$DelayMs = 200,
+    [switch]$SkipCert
 )
+
+if ($SkipCert) {
+    add-type @"
+using System.Net;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAll {
+    public static void Enable() {
+        ServicePointManager.ServerCertificateValidationCallback =
+            delegate { return true; };
+    }
+}
+"@
+    [TrustAll]::Enable()
+    Write-Host "[*] TLS cert validation disabled (self-signed OK)"
+}
 
 $domains = @(
     @{ Domain="avsvmcloud.com"; Group="APT29"; Family="SUNBURST"; Year=2020 },
